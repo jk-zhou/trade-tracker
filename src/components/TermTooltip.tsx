@@ -32,7 +32,7 @@ export default function TermTooltip({ term, explanation }: { term: string, expla
                 <X size={18} />
               </button>
             </div>
-            <div className="p-5 text-sm leading-relaxed text-muted-foreground">
+            <div className="p-5 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
               {explanation}
             </div>
           </div>

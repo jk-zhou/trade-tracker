@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { getAllTransactions } from '@/actions/transaction';
-import { analyzePortfolio, calculateAnnualizedROIC, formatUTCDate } from '@/lib/portfolioUtils';
+import { analyzePortfolio, calculateAnnualizedROIC, formatUTCDate, analyzePerformanceHistory } from '@/lib/portfolioUtils';
 import { getCurrentPrice } from '@/lib/marketData';
 import { Plus, TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
 import Link from 'next/link';
@@ -8,6 +8,8 @@ import { cookies } from 'next/headers';
 import LanguageToggle from '@/components/LanguageToggle';
 import TermTooltip from '@/components/TermTooltip';
 import PositionsAccordion from '@/components/PositionsAccordion';
+import PerformanceChart from '@/components/PerformanceChart';
+import CalendarPnL from '@/components/CalendarPnL';
 
 const DICT = {
   en: {
@@ -15,14 +17,15 @@ const DICT = {
     subtitle: 'Real-time Options & Stock Tracker',
     newTrade: 'New Trade',
     totalPnl: 'Total PnL',
-    exp_totalPnl: 'The sum of all realized gains/losses from closed positions and unrealized gains/losses from active positions.',
+    exp_totalPnl: 'The sum of all realized gains/losses from closed positions and unrealized gains/losses from active positions.\n\nFormula: Total PnL = Realized PnL + Unrealized PnL',
     totalRoic: 'Total ROIC',
-    exp_totalRoic: 'Return on Invested Capital. Calculated as Total PnL divided by the maximum capital deployed historically.',
+    exp_totalRoic: 'Return on Invested Capital. Calculated as Total PnL divided by the maximum capital deployed historically.\n\nFormula: Total ROIC = Total PnL / Historical Max Capital Deployed',
     annualizedRoic: 'Annualized ROIC',
-    exp_annualizedRoic: 'Total ROIC scaled to an annual rate based on the time since your first trade.',
+    exp_annualizedRoic: 'Total ROIC scaled to an annual rate based on the time since your first trade.\n\nFormula: Annualized ROIC = Total ROIC * (365 / Days Since First Trade)',
     marginUtilized: 'Margin Utilized',
     exp_marginUtilized: 'The amount of cash or margin currently locked to secure open positions (e.g. short puts or stock).',
     max: 'Max',
+    exp_max: 'The historical maximum amount of capital that was simultaneously deployed or locked as margin at any point in time. This is used as the denominator for calculating ROIC.',
     activePositions: 'Active Positions',
     noPositions: 'No active positions. Add a trade to get started.',
     units: 'Units',
@@ -38,20 +41,28 @@ const DICT = {
     livePrice: 'Live Price',
     combinedRealized: 'Combined Realized',
     combinedUnrealized: 'Combined Unrealized',
+    performanceChart: 'Performance Curve',
+    calendarView: 'Calendar PnL',
+    '1W': '1W',
+    '1M': '1M',
+    'YTD': 'YTD',
+    '1Y': '1Y',
+    'ALL': 'ALL',
   },
   zh: {
     portfolio: '投资组合',
     subtitle: '实时期权与股票追踪器',
     newTrade: '新建交易',
     totalPnl: '总盈亏',
-    exp_totalPnl: '所有已平仓头寸的已实现盈亏与当前活跃头寸的未实现盈亏之和。',
+    exp_totalPnl: '所有已平仓头寸的已实现盈亏与当前活跃头寸的未实现盈亏之和。\n\n计算公式：总盈亏 = 已实现盈亏 + 未实现盈亏',
     totalRoic: '总回报率 (ROIC)',
-    exp_totalRoic: '投资回报率。计算方式为“总盈亏”除以历史上的“最大已部署资金”。',
+    exp_totalRoic: '投资回报率。计算方式为“总盈亏”除以历史上的“最大已部署资金”。\n\n计算公式：总回报率 (ROIC) = 总盈亏 ÷ 历史最大已用资金',
     annualizedRoic: '年化回报率',
-    exp_annualizedRoic: '根据自首笔交易以来的时间跨度，将“总回报率”折算为年度的预期回报率。',
+    exp_annualizedRoic: '根据自首笔交易以来的时间跨度，将“总回报率”折算为年度的预期回报率。\n\n计算公式：年化回报率 = 总回报率 × (365 ÷ 距离首笔交易的天数)',
     marginUtilized: '已用保证金',
     exp_marginUtilized: '当前被锁定用于维持敞口（例如卖出看跌期权或持股）的现金或保证金总额。',
     max: '最大记录',
+    exp_max: '在历史上的任意时刻，同时投入或锁定作为保证金的最大资金数额。该数值被作为计算回报率 (ROIC) 的核心分母。',
     activePositions: '当前持仓',
     noPositions: '暂无持仓，请添加交易开始使用。',
     units: '单位',
@@ -67,6 +78,13 @@ const DICT = {
     livePrice: '最新现价',
     combinedRealized: '合并已实现盈亏',
     combinedUnrealized: '合并未实现盈亏',
+    performanceChart: '历史表现折线图',
+    calendarView: '日历盈亏热力图',
+    '1W': '近1周',
+    '1M': '近1月',
+    'YTD': '今年',
+    '1Y': '近1年',
+    'ALL': '全部',
   }
 };
 
@@ -77,6 +95,7 @@ export default async function DashboardPage() {
 
   const transactions = await getAllTransactions();
   const summary = analyzePortfolio(transactions);
+  const performanceHistory = analyzePerformanceHistory(transactions);
 
   // Fetch real-time market data for open positions
   const positionsWithLivePrice = await Promise.all(
@@ -124,7 +143,7 @@ export default async function DashboardPage() {
       </header>
 
       {/* Top Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <MetricCard 
           title={<span className="flex items-center">{t.totalPnl} <TermTooltip term={t.totalPnl} explanation={t.exp_totalPnl} /></span>} 
           value={formatCurrency(totalPnL)} 
@@ -148,9 +167,16 @@ export default async function DashboardPage() {
             {t.marginUtilized} <TermTooltip term={t.marginUtilized} explanation={t.exp_marginUtilized} />
           </span>
           <span className="text-xl font-semibold mt-1">{formatCurrency(summary.currentMarginLocked)}</span>
-          <span className="text-xs text-muted-foreground mt-1">{t.max}: {formatCurrency(summary.historicalMaxCapitalDeployed)}</span>
+          <span className="text-xs text-muted-foreground mt-1 flex items-center">
+            {t.max}: {formatCurrency(summary.historicalMaxCapitalDeployed)}
+            <TermTooltip term={t.max} explanation={t.exp_max} />
+          </span>
         </div>
       </div>
+
+      {/* Performance Charts */}
+      <PerformanceChart data={performanceHistory} dict={t} />
+      <CalendarPnL data={performanceHistory} dict={t} />
 
       {/* Active Positions */}
       <h2 className="text-xl font-semibold mt-10 mb-4 border-b border-border pb-2 flex items-center">
