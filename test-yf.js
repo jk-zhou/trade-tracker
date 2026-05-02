@@ -1,5 +1,4 @@
-import YahooFinance from 'yahoo-finance2';
-const yf = new YahooFinance();
+const yf = require('yahoo-finance2').default;
 async function test() {
   try {
     await yf.historical('^GSPC', { period1: new Date() });
@@ -12,13 +11,6 @@ async function test() {
     console.log('String works');
   } catch (e) {
     console.error('String failed:', e.message);
-  }
-  try {
-    let d = new Date(); d.setDate(d.getDate() - 3);
-    await yf.historical('^GSPC', { period1: d.toISOString().split('T')[0] });
-    console.log('String - 3 days works');
-  } catch (e) {
-    console.error('String - 3 days failed:', e.message);
   }
 }
 test();

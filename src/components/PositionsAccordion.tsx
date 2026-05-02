@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { formatUTCDate } from '@/lib/portfolioUtils';
+import { formatUTCDate, calculateAnnualizedROIC } from '@/lib/portfolioUtils';
 import TermTooltip from './TermTooltip';
+import Link from 'next/link';
 
-export default function PositionsAccordion({ positions, dict }: { positions: any[], dict: any }) {
+export default function PositionsAccordion({ positions, dict, summary }: { positions: any[], dict: any, summary: any }) {
   const [expandedSymbols, setExpandedSymbols] = useState<Record<string, boolean>>({});
 
   const toggleSymbol = (symbol: string) => {
@@ -81,6 +82,42 @@ export default function PositionsAccordion({ positions, dict }: { positions: any
                   </span>
                 </div>
               </div>
+
+              {/* Symbol ROIC Metrics */}
+              <div className="flex flex-row md:flex-col justify-between items-end gap-1 mt-2 md:mt-0 md:ml-4">
+                <div className="text-right flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    {dict.realizedRoic || 'Realized ROIC'}
+                  </span>
+                  <span className={`text-sm font-medium ${
+                    (summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0) >= 0 
+                      ? 'text-success' : 'text-destructive'
+                  }`}>
+                    {new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(
+                      summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0
+                    )}
+                  </span>
+                </div>
+                <div className="text-right flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                    {dict.annualizedRoic || 'Annualized ROIC'}
+                  </span>
+                  <span className={`text-sm font-medium ${
+                    calculateAnnualizedROIC(
+                      summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0, 
+                      summary?.symbolFirstTradeDate?.[symbol]
+                    ) >= 0 
+                      ? 'text-success' : 'text-destructive'
+                  }`}>
+                    {new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(
+                      calculateAnnualizedROIC(
+                        summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0, 
+                        summary?.symbolFirstTradeDate?.[symbol]
+                      )
+                    )}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Accordion Body (Individual Positions) */}
@@ -127,6 +164,21 @@ export default function PositionsAccordion({ positions, dict }: { positions: any
                           </span>
                         </div>
                       )}
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <Link 
+                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=BUY${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + pos.expiration.toISOString() : ''}`}
+                          className="text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
+                        >
+                          {dict.buyAction || 'Buy'}
+                        </Link>
+                        <Link 
+                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=SELL${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + pos.expiration.toISOString() : ''}`}
+                          className="text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 rounded-md transition-colors"
+                        >
+                          {dict.sellAction || 'Sell'}
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -3,7 +3,7 @@
 import { Transaction } from '@prisma/client';
 import { deleteTransaction, bulkDeleteTransactions } from '@/actions/transaction';
 import { formatUTCDate } from '@/lib/portfolioUtils';
-import { ArrowLeft, Trash2, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Trash2, Search, Filter, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
 
@@ -37,6 +37,11 @@ const DICT = {
     expiration: 'Expiration',
     bulkDelete: 'Delete Selected',
     selectAll: 'Select All',
+    sortBy: 'Sort By',
+    sortDate: 'Date',
+    sortSymbol: 'Symbol',
+    sortType: 'Asset Type',
+    sortAmount: 'Amount',
   },
   zh: {
     back: '返回控制面板',
@@ -67,10 +72,15 @@ const DICT = {
     expiration: '到期',
     bulkDelete: '批量删除',
     selectAll: '全选当前',
+    sortBy: '排序依据',
+    sortDate: '交易日期',
+    sortSymbol: '标的代码',
+    sortType: '资产类型',
+    sortAmount: '交易金额',
   }
 };
 
-export default function HistoryClient({ initialTransactions, lang = 'zh' }: { initialTransactions: Transaction[], lang?: string }) {
+export default function HistoryClient({ initialTransactions, lang = 'zh', isEmbedded = false }: { initialTransactions: Transaction[], lang?: string, isEmbedded?: boolean }) {
   const [transactions, setTransactions] = useState(initialTransactions);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
@@ -78,11 +88,14 @@ export default function HistoryClient({ initialTransactions, lang = 'zh' }: { in
   const [assetFilter, setAssetFilter] = useState('ALL');
   const [actionFilter, setActionFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ALL');
+  
+  const [sortField, setSortField] = useState<'date' | 'symbol' | 'type' | 'amount'>('date');
+  const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
 
   const t_dict = DICT[lang as keyof typeof DICT] || DICT.zh;
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    const filtered = transactions.filter(t => {
       // Ticker filter
       if (tickerFilter && !t.symbol.toLowerCase().includes(tickerFilter.toLowerCase())) return false;
       
@@ -105,7 +118,28 @@ export default function HistoryClient({ initialTransactions, lang = 'zh' }: { in
       
       return true;
     });
-  }, [transactions, tickerFilter, assetFilter, actionFilter, dateFilter]);
+
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'date':
+          comparison = new Date(a.tradeDate).getTime() - new Date(b.tradeDate).getTime();
+          break;
+        case 'symbol':
+          comparison = a.symbol.localeCompare(b.symbol);
+          break;
+        case 'type':
+          comparison = a.assetType.localeCompare(b.assetType);
+          break;
+        case 'amount':
+          const amountA = a.price * a.quantity * (a.multiplier || 1);
+          const amountB = b.price * b.quantity * (b.multiplier || 1);
+          comparison = Math.abs(amountA) - Math.abs(amountB);
+          break;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [transactions, tickerFilter, assetFilter, actionFilter, dateFilter, sortField, sortDirection]);
 
   const handleDelete = async (id: string) => {
     if (!confirm(t_dict.confirmDelete)) return;
@@ -158,17 +192,21 @@ export default function HistoryClient({ initialTransactions, lang = 'zh' }: { in
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
-      <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={16} className="mr-1" /> {t_dict.back}
-      </Link>
+    <div className={isEmbedded ? "space-y-6" : "max-w-4xl mx-auto p-4 md:p-8 space-y-6"}>
+      {!isEmbedded && (
+        <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={16} className="mr-1" /> {t_dict.back}
+        </Link>
+      )}
 
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-bold">{t_dict.title}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t_dict.subtitle}</p>
+      {!isEmbedded && (
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-2xl font-bold">{t_dict.title}</h1>
+            <p className="text-muted-foreground text-sm mt-1">{t_dict.subtitle}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Control Panel: Filters */}
       <div className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
@@ -230,6 +268,30 @@ export default function HistoryClient({ initialTransactions, lang = 'zh' }: { in
               <option value="365">{t_dict.last365}</option>
             </select>
           </div>
+        </div>
+
+        <div className="flex items-center gap-4 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t_dict.sortBy}:</span>
+            <select 
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value as any)}
+              className="bg-transparent text-sm font-medium focus:outline-none cursor-pointer"
+            >
+              <option value="date">{t_dict.sortDate}</option>
+              <option value="symbol">{t_dict.sortSymbol}</option>
+              <option value="type">{t_dict.sortType}</option>
+              <option value="amount">{t_dict.sortAmount}</option>
+            </select>
+          </div>
+          <button 
+            onClick={() => setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc')}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
+            title="Toggle Sort Direction"
+          >
+            <ArrowUpDown size={14} />
+            {sortDirection === 'desc' ? '↓' : '↑'}
+          </button>
         </div>
       </div>
 

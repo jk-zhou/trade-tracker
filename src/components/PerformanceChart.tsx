@@ -10,17 +10,68 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  Legend
 } from 'recharts';
 
-export default function PerformanceChart({ data, dict }: { data: DailyPerformance[], dict: any }) {
-  const [timeSpan, setTimeSpan] = useState<'1W' | '1M' | 'YTD' | '1Y' | 'ALL'>('1M');
+interface BenchmarkPoint {
+  date: Date;
+  close: number;
+}
+
+export default function PerformanceChart({ 
+  data, 
+  dict,
+  sp500Data,
+  nasdaqData
+}: { 
+  data: DailyPerformance[], 
+  dict: any,
+  sp500Data?: BenchmarkPoint[],
+  nasdaqData?: BenchmarkPoint[]
+}) {
+  const [timeSpan, setTimeSpan] = useState<'1W' | '1M' | 'YTD' | '1Y' | 'ALL'>('1W');
+  const [showSp500, setShowSp500] = useState(false);
+  const [showNasdaq, setShowNasdaq] = useState(false);
+
+  const mergedData = useMemo(() => {
+    if (data.length === 0) return [];
+    
+    const sp500Map = new Map();
+    const nasdaqMap = new Map();
+    
+    const toYMD = (d: any) => new Date(d).toISOString().split('T')[0];
+    
+    if (sp500Data?.length) {
+      sp500Data.forEach(d => sp500Map.set(toYMD(d.date), d.close));
+    }
+    if (nasdaqData?.length) {
+      nasdaqData.forEach(d => nasdaqMap.set(toYMD(d.date), d.close));
+    }
+
+    const firstSp500 = sp500Data?.[0]?.close || 1;
+    const firstNasdaq = nasdaqData?.[0]?.close || 1;
+
+    let lastSp500Return = 0;
+    let lastNasdaqReturn = 0;
+
+    return data.map(d => {
+      if (sp500Map.has(d.date)) lastSp500Return = (sp500Map.get(d.date) / firstSp500) - 1;
+      if (nasdaqMap.has(d.date)) lastNasdaqReturn = (nasdaqMap.get(d.date) / firstNasdaq) - 1;
+
+      return {
+        ...d,
+        sp500Return: lastSp500Return,
+        nasdaqReturn: lastNasdaqReturn,
+      };
+    });
+  }, [data, sp500Data, nasdaqData]);
 
   const filteredData = useMemo(() => {
-    if (data.length === 0) return [];
+    if (mergedData.length === 0) return [];
     const now = new Date();
     
-    return data.filter(d => {
+    return mergedData.filter(d => {
       const date = new Date(d.timestamp);
       if (timeSpan === 'ALL') return true;
       if (timeSpan === 'YTD') return date.getFullYear() === now.getFullYear();
@@ -32,7 +83,7 @@ export default function PerformanceChart({ data, dict }: { data: DailyPerformanc
       
       return true;
     });
-  }, [data, timeSpan]);
+  }, [mergedData, timeSpan]);
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(val);
   const formatPercent = (val: number) => new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(val);
@@ -44,7 +95,26 @@ export default function PerformanceChart({ data, dict }: { data: DailyPerformanc
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h2 className="text-xl font-bold">{dict.performanceChart || 'Performance'}</h2>
-          <p className="text-sm text-muted-foreground">{dict.realizedPnl} & ROIC</p>
+          <div className="flex items-center gap-4 mt-2">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              <input 
+                type="checkbox" 
+                checked={showSp500} 
+                onChange={e => setShowSp500(e.target.checked)} 
+                className="rounded border-border bg-background text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+              />
+              S&P 500
+            </label>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+              <input 
+                type="checkbox" 
+                checked={showNasdaq} 
+                onChange={e => setShowNasdaq(e.target.checked)} 
+                className="rounded border-border bg-background text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+              />
+              Nasdaq 100
+            </label>
+          </div>
         </div>
         <div className="flex bg-muted/50 p-1 rounded-lg">
           {(['1W', '1M', 'YTD', '1Y', 'ALL'] as const).map(span => (
@@ -63,7 +133,7 @@ export default function PerformanceChart({ data, dict }: { data: DailyPerformanc
         </div>
       </div>
 
-      <div className="h-[300px] w-full">
+      <div className="h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={filteredData} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -73,25 +143,25 @@ export default function PerformanceChart({ data, dict }: { data: DailyPerformanc
                 const d = new Date(val);
                 return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
               }}
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickMargin={10}
+              stroke="#888888"
+              fontSize={14}
+              tickMargin={12}
               minTickGap={30}
             />
             <YAxis 
               yAxisId="left"
               tickFormatter={(val) => `$${val}`} 
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
+              stroke="#888888"
+              fontSize={14}
               width={60}
             />
             <YAxis 
               yAxisId="right" 
               orientation="right" 
               tickFormatter={(val) => `${(val * 100).toFixed(0)}%`}
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              width={40}
+              stroke="#888888"
+              fontSize={14}
+              width={45}
             />
             <Tooltip 
               contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem' }}
@@ -100,31 +170,59 @@ export default function PerformanceChart({ data, dict }: { data: DailyPerformanc
               formatter={(value: number, name: string) => {
                 if (name === 'cumulativeRealizedPnL') return [formatCurrency(value), dict.realizedPnl];
                 if (name === 'cumulativeROIC') return [formatPercent(value), 'ROIC'];
+                if (name === 'sp500Return') return [formatPercent(value), 'S&P 500'];
+                if (name === 'nasdaqReturn') return [formatPercent(value), 'Nasdaq 100'];
                 return [value, name];
               }}
               labelFormatter={(label) => new Date(label).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
             />
+            <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '14px' }} />
             <ReferenceLine y={0} yAxisId="left" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.5} />
+            
             <Line 
               yAxisId="left"
               type="monotone" 
               dataKey="cumulativeRealizedPnL" 
               stroke="#3b82f6" 
-              strokeWidth={2}
+              strokeWidth={3}
               dot={false}
               activeDot={{ r: 6, fill: "#3b82f6" }}
-              name="cumulativeRealizedPnL"
+              name={dict.realizedPnl}
             />
             <Line 
               yAxisId="right"
               type="monotone" 
               dataKey="cumulativeROIC" 
               stroke="#10b981" 
-              strokeWidth={2}
+              strokeWidth={3}
               dot={false}
               activeDot={{ r: 6, fill: "#10b981" }}
-              name="cumulativeROIC"
+              name="ROIC"
             />
+            {showSp500 && (
+              <Line 
+                yAxisId="right"
+                type="monotone" 
+                dataKey="sp500Return" 
+                stroke="#f59e0b" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                name="S&P 500"
+              />
+            )}
+            {showNasdaq && (
+              <Line 
+                yAxisId="right"
+                type="monotone" 
+                dataKey="nasdaqReturn" 
+                stroke="#8b5cf6" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={false}
+                name="Nasdaq 100"
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>

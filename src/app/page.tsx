@@ -1,19 +1,16 @@
 export const dynamic = 'force-dynamic';
 import { getAllTransactions } from '@/actions/transaction';
-import { analyzePortfolio, calculateAnnualizedROIC, formatUTCDate, analyzePerformanceHistory } from '@/lib/portfolioUtils';
-import { getCurrentPrice } from '@/lib/marketData';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { analyzePortfolio, calculateAnnualizedROIC } from '@/lib/portfolioUtils';
+import { getCurrentPrice, getBenchmarkHistory } from '@/lib/marketData';
+import { Plus, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
-import LanguageToggle from '@/components/LanguageToggle';
-import TermTooltip from '@/components/TermTooltip';
-import PositionsAccordion from '@/components/PositionsAccordion';
-import PerformanceChart from '@/components/PerformanceChart';
-import CalendarPnL from '@/components/CalendarPnL';
+import DashboardClient from '@/components/DashboardClient';
+import { analyzePerformanceHistory } from '@/lib/portfolioUtils';
 
 const DICT = {
   en: {
-    portfolio: 'Portfolio',
+    portfolio: 'Trade Tracker',
     subtitle: 'Real-time Options & Stock Tracker',
     newTrade: 'New Trade',
     totalPnl: 'Total PnL',
@@ -36,13 +33,19 @@ const DICT = {
     exp_realizedPnl: 'Profit or loss from trades that have been closed.',
     unrealizedPnl: 'Unrealized PnL',
     unrealizedLive: 'Unrealized (Live: ',
-    recentActivity: 'Recent Activity',
-    viewAll: 'View All',
     livePrice: 'Live Price',
     combinedRealized: 'Combined Realized',
     combinedUnrealized: 'Combined Unrealized',
     performanceChart: 'Performance Curve',
     calendarView: 'Calendar PnL',
+    tabOverview: 'Overview',
+    tabPositions: 'Positions',
+    tabHistory: 'History',
+    buyAction: 'Buy',
+    sellAction: 'Sell',
+    realizedRoic: 'Realized ROIC',
+    realizedLabel: 'R:',
+    unrealizedLabel: 'U:',
     '1W': '1W',
     '1M': '1M',
     'YTD': 'YTD',
@@ -50,7 +53,7 @@ const DICT = {
     'ALL': 'ALL',
   },
   zh: {
-    portfolio: '投资组合',
+    portfolio: '交易追踪',
     subtitle: '实时期权与股票追踪器',
     newTrade: '新建交易',
     totalPnl: '总盈亏',
@@ -73,13 +76,19 @@ const DICT = {
     exp_realizedPnl: '因平仓交易而已经兑现的实际利润或亏损。',
     unrealizedPnl: '未实现盈亏',
     unrealizedLive: '未实现 (现价: ',
-    recentActivity: '最近活动',
-    viewAll: '查看全部',
     livePrice: '最新现价',
     combinedRealized: '合并已实现盈亏',
     combinedUnrealized: '合并未实现盈亏',
     performanceChart: '历史表现折线图',
     calendarView: '日历盈亏热力图',
+    tabOverview: '概览',
+    tabPositions: '持仓',
+    tabHistory: '交易记录',
+    buyAction: '买入',
+    sellAction: '卖出',
+    realizedRoic: '已实现回报率 (ROIC)',
+    realizedLabel: '已实现:',
+    unrealizedLabel: '未实现:',
     '1W': '近1周',
     '1M': '近1月',
     'YTD': '今年',
@@ -121,111 +130,55 @@ export default async function DashboardPage() {
   const roic = summary.historicalMaxCapitalDeployed > 0 ? (totalPnL / summary.historicalMaxCapitalDeployed) : 0;
   const annualizedRoic = calculateAnnualizedROIC(roic, summary.firstTradeDate);
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-  const formatPercent = (val: number) => new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(val);
+  // Fetch benchmark data
+  let sp500Data: any[] = [];
+  let nasdaqData: any[] = [];
+  if (summary.firstTradeDate) {
+    const [sp500, ndx] = await Promise.all([
+      getBenchmarkHistory('^GSPC', summary.firstTradeDate),
+      getBenchmarkHistory('^NDX', summary.firstTradeDate)
+    ]);
+    sp500Data = sp500;
+    nasdaqData = ndx;
+  }
 
   return (
-    <main className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto space-y-6">
-      <header className="flex justify-between items-center mb-8">
+    <main className="w-full min-h-screen p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+      <header className="flex justify-between items-center mb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t.portfolio}</h1>
-            <LanguageToggle currentLang={lang} />
-          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{t.portfolio}</h1>
           <p className="text-muted-foreground text-sm mt-1">{t.subtitle}</p>
         </div>
-        <Link 
-          href="/trade" 
-          className="bg-primary hover:bg-blue-600 text-primary-foreground px-4 py-2 rounded-full font-medium flex items-center shadow-lg shadow-blue-500/20 transition-all active:scale-95 whitespace-nowrap"
-        >
-          <Plus size={18} className="mr-1" /> {t.newTrade}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/settings"
+            className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+          >
+            <Settings size={20} />
+          </Link>
+          <Link 
+            href="/trade" 
+            className="bg-primary hover:bg-blue-600 text-primary-foreground px-4 py-2 rounded-full font-medium flex items-center shadow-lg shadow-blue-500/20 transition-all active:scale-95 whitespace-nowrap"
+          >
+            <Plus size={18} className="mr-1" /> {t.newTrade}
+          </Link>
+        </div>
       </header>
 
-      {/* Top Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <MetricCard 
-          title={<span className="flex items-center">{t.totalPnl} <TermTooltip term={t.totalPnl} explanation={t.exp_totalPnl} /></span>} 
-          value={formatCurrency(totalPnL)} 
-          isPositive={totalPnL >= 0}
-          icon={<DollarSign size={16} />}
-        />
-        <MetricCard 
-          title={<span className="flex items-center">{t.totalRoic} <TermTooltip term={t.totalRoic} explanation={t.exp_totalRoic} /></span>} 
-          value={formatPercent(roic)} 
-          isPositive={roic >= 0}
-          icon={<Activity size={16} />}
-        />
-        <MetricCard 
-          title={<span className="flex items-center">{t.annualizedRoic} <TermTooltip term={t.annualizedRoic} explanation={t.exp_annualizedRoic} /></span>} 
-          value={formatPercent(annualizedRoic)} 
-          isPositive={annualizedRoic >= 0}
-          icon={<TrendingUp size={16} />}
-        />
-        <div className="bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col justify-between">
-          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider flex items-center">
-            {t.marginUtilized} <TermTooltip term={t.marginUtilized} explanation={t.exp_marginUtilized} />
-          </span>
-          <span className="text-xl font-semibold mt-1">{formatCurrency(summary.currentMarginLocked)}</span>
-          <span className="text-xs text-muted-foreground mt-1 flex items-center">
-            {t.max}: {formatCurrency(summary.historicalMaxCapitalDeployed)}
-            <TermTooltip term={t.max} explanation={t.exp_max} />
-          </span>
-        </div>
-      </div>
-
-      {/* Performance Charts */}
-      <PerformanceChart data={performanceHistory} dict={t} />
-      <CalendarPnL data={performanceHistory} dict={t} />
-
-      {/* Active Positions */}
-      <h2 className="text-xl font-semibold mt-10 mb-4 border-b border-border pb-2 flex items-center">
-        {t.activePositions}
-      </h2>
-      <PositionsAccordion positions={positionsWithLivePrice} dict={t} />
-
-      {/* Recent Activity */}
-      <div className="flex justify-between items-center mt-10 mb-4 border-b border-border pb-2">
-        <h2 className="text-xl font-semibold flex items-center">
-          {t.recentActivity}
-        </h2>
-        <Link href="/history" className="text-sm text-primary hover:underline">{t.viewAll}</Link>
-      </div>
-      <div className="space-y-3">
-        {transactions.slice(0, 5).map((tx) => (
-          <div key={tx.id} className="flex justify-between items-center p-3 bg-card border border-border rounded-lg">
-            <div>
-              <span className="font-semibold">{tx.symbol}</span> <span className="text-muted-foreground text-sm">{tx.assetType}</span>
-              <div className="text-xs text-muted-foreground mt-0.5">{formatUTCDate(tx.tradeDate, 'MMM dd, yyyy')}</div>
-            </div>
-            <div className="text-right">
-              <span className={`font-medium text-sm px-2 py-1 rounded ${
-                tx.action === 'BUY' ? 'bg-success/10 text-success' : 
-                tx.action === 'SELL' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
-              }`}>
-                {tx.action}
-              </span>
-              <div className="text-sm mt-1">
-                {tx.quantity} @ {formatCurrency(tx.price)}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <DashboardClient 
+        dict={t}
+        summary={summary}
+        performanceHistory={performanceHistory}
+        positionsWithLivePrice={positionsWithLivePrice}
+        transactions={transactions}
+        sp500Data={sp500Data}
+        nasdaqData={nasdaqData}
+        totalPnL={totalPnL}
+        totalUnrealizedPnL={totalUnrealizedPnL}
+        roic={roic}
+        annualizedRoic={annualizedRoic}
+        lang={lang}
+      />
     </main>
-  );
-}
-
-function MetricCard({ title, value, isPositive, icon }: { title: React.ReactNode, value: string, isPositive: boolean, icon: React.ReactNode }) {
-  return (
-    <div className="bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col justify-between">
-      <div className="flex items-center text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2">
-        <span className="mr-1">{icon}</span>
-        {title}
-      </div>
-      <span className={`text-2xl font-bold ${isPositive ? 'text-success' : 'text-destructive'}`}>
-        {isPositive ? '+' : ''}{value}
-      </span>
-    </div>
   );
 }

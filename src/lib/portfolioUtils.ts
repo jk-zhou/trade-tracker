@@ -18,6 +18,8 @@ export interface PortfolioSummary {
   historicalMaxCapitalDeployed: number;
   currentMarginLocked: number;
   firstTradeDate: Date | null;
+  symbolMaxCapitalDeployed: Record<string, number>;
+  symbolFirstTradeDate: Record<string, Date>;
 }
 
 // Helper to uniquely identify an option contract or stock
@@ -34,8 +36,14 @@ export function analyzePortfolio(transactions: Transaction[]): PortfolioSummary 
   const positions = new Map<string, Position>();
   let totalRealizedPnL = 0;
   let maxCapitalDeployed = 0;
+  
+  const symbolMaxCapitalDeployed: Record<string, number> = {};
+  const symbolFirstTradeDate: Record<string, Date> = {};
 
   for (const t of sorted) {
+    if (!symbolFirstTradeDate[t.symbol]) {
+      symbolFirstTradeDate[t.symbol] = t.tradeDate;
+    }
     const key = getPositionKey(t);
     const pos = positions.get(key) || {
       symbol: t.symbol,
@@ -97,22 +105,33 @@ export function analyzePortfolio(transactions: Transaction[]): PortfolioSummary 
     // Calculate simultaneous capital deployed at this moment
     let currentCapitalDeployed = 0;
     let currentMargin = 0;
+    
+    // Track capital deployed per symbol at this exact moment
+    const currentSymbolCapital: Record<string, number> = {};
+
     for (const [_, p] of positions) {
       if (p.quantity === 0) continue;
       
+      let pCapital = 0;
       if (p.assetType === 'STOCK' && p.quantity > 0) {
-        currentCapitalDeployed += p.quantity * p.averageCost;
+        pCapital = p.quantity * p.averageCost;
       } else if (p.assetType === 'PUT' && p.quantity < 0) {
         // Short put margin = Strike * 100 * contracts
-        const margin = (p.strike || 0) * p.multiplier * Math.abs(p.quantity);
-        currentMargin += margin;
-        currentCapitalDeployed += margin;
+        pCapital = (p.strike || 0) * p.multiplier * Math.abs(p.quantity);
+        currentMargin += pCapital;
       }
-      // Note: Covered calls (Short Call) are covered by stock, so they don't lock additional margin in a cash/basic margin account
+      currentCapitalDeployed += pCapital;
+      currentSymbolCapital[p.symbol] = (currentSymbolCapital[p.symbol] || 0) + pCapital;
     }
 
     if (currentCapitalDeployed > maxCapitalDeployed) {
       maxCapitalDeployed = currentCapitalDeployed;
+    }
+    
+    for (const sym of Object.keys(currentSymbolCapital)) {
+      if (currentSymbolCapital[sym] > (symbolMaxCapitalDeployed[sym] || 0)) {
+        symbolMaxCapitalDeployed[sym] = currentSymbolCapital[sym];
+      }
     }
   }
 
@@ -136,6 +155,8 @@ export function analyzePortfolio(transactions: Transaction[]): PortfolioSummary 
     historicalMaxCapitalDeployed: maxCapitalDeployed,
     currentMarginLocked,
     firstTradeDate,
+    symbolMaxCapitalDeployed,
+    symbolFirstTradeDate,
   };
 }
 

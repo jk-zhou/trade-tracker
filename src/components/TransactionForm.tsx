@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { addTransaction } from '@/actions/transaction';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -63,10 +63,18 @@ const DICT = {
 
 export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = DICT[lang as keyof typeof DICT] || DICT.zh;
   const [loading, setLoading] = useState(false);
-  const [assetType, setAssetType] = useState<'STOCK' | 'CALL' | 'PUT'>('STOCK');
-  const [action, setAction] = useState<'BUY' | 'SELL' | 'EXERCISE' | 'ASSIGNMENT' | 'EXPIRATION'>('BUY');
+
+  const initialAssetType = (searchParams.get('assetType') as any) || 'STOCK';
+  const initialAction = (searchParams.get('action') as any) || 'BUY';
+  const initialSymbol = searchParams.get('symbol') || '';
+  const initialStrike = searchParams.get('strike') || '';
+  const initialExpiration = searchParams.get('expiration') ? searchParams.get('expiration')?.split('T')[0] : '';
+
+  const [assetType, setAssetType] = useState<'STOCK' | 'CALL' | 'PUT'>(initialAssetType);
+  const [action, setAction] = useState<'BUY' | 'SELL' | 'EXERCISE' | 'ASSIGNMENT' | 'EXPIRATION'>(initialAction);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -150,7 +158,7 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-sm font-medium">{t.symbol}</label>
-            <input required type="text" name="symbol" placeholder="AAPL" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm uppercase focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
+            <input required type="text" name="symbol" defaultValue={initialSymbol} placeholder="AAPL" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm uppercase focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">{t.tradeDate}</label>
@@ -173,11 +181,11 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
           <div className="grid grid-cols-2 gap-4 p-4 bg-background/50 rounded-lg border border-border/50">
             <div className="space-y-1">
               <label className="text-sm font-medium text-purple-400">{t.strike}</label>
-              <input required type="number" name="strike" min="0" step="0.5" placeholder="155.00" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
+              <input required type="number" name="strike" defaultValue={initialStrike} min="0" step="0.5" placeholder="155.00" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-purple-400">{t.expiration}</label>
-              <input required type="date" name="expiration" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              <input required type="date" name="expiration" defaultValue={initialExpiration} className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
             </div>
           </div>
         )}
