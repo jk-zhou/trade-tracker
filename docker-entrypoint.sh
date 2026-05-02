@@ -1,9 +1,12 @@
 #!/bin/sh
 set -e
 
-# Wait for volume to be ready and push Prisma schema
-echo "Applying database schema to /app/data/trade-tracker.db..."
-npx prisma db push --accept-data-loss
+# Apply database migrations safely (without accepting data loss)
+echo "Applying database migrations to /app/data/trade-tracker.db..."
+npx prisma migrate deploy 2>/dev/null || {
+  echo "No migrations found, using db push (safe mode)..."
+  npx prisma db push --skip-generate
+}
 
 echo "Starting Trade Tracker..."
 exec node server.js

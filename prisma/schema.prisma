@@ -28,4 +28,9 @@ model Transaction {
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
+  @@index([tradeDate])
+  @@index([symbol])
+  @@index([symbol, tradeDate])
 }
+

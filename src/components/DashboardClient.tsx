@@ -1,22 +1,43 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import TermTooltip from './TermTooltip';
 import PerformanceChart from './PerformanceChart';
 import CalendarPnL from './CalendarPnL';
 import PositionsAccordion from './PositionsAccordion';
 import HistoryClient from '../app/history/HistoryClient';
-import { calculateAnnualizedROIC } from '@/lib/portfolioUtils';
+import { calculateAnnualizedROIC, type PortfolioSummary, type DailyPerformance } from '@/lib/portfolioUtils';
+import { formatCurrency, formatPercent } from '@/lib/format';
+import type { Dict } from '@/lib/i18n';
 import { DollarSign, Activity, TrendingUp } from 'lucide-react';
+import { Transaction } from '@prisma/client';
+
+interface BenchmarkPoint {
+  date: Date;
+  close: number;
+}
+
+interface PositionWithLivePrice {
+  symbol: string;
+  assetType: 'STOCK' | 'CALL' | 'PUT';
+  quantity: number;
+  averageCost: number;
+  strike?: number | null;
+  expiration?: Date | null;
+  multiplier: number;
+  realizedPnL: number;
+  currentPrice: number;
+  unrealizedPnL: number;
+}
 
 interface DashboardClientProps {
-  dict: any;
-  summary: any;
-  performanceHistory: any[];
-  positionsWithLivePrice: any[];
-  transactions: any[];
-  sp500Data: any[];
-  nasdaqData: any[];
+  dict: Dict;
+  summary: PortfolioSummary;
+  performanceHistory: DailyPerformance[];
+  positionsWithLivePrice: PositionWithLivePrice[];
+  transactions: Transaction[];
+  sp500Data: BenchmarkPoint[];
+  nasdaqData: BenchmarkPoint[];
   totalPnL: number;
   totalUnrealizedPnL: number;
   roic: number;
@@ -66,9 +87,6 @@ export default function DashboardClient({
     touchStartX.current = null;
   };
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-  const formatPercent = (val: number) => new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(val);
-
   const realizedRoic = summary.historicalMaxCapitalDeployed > 0 ? (summary.totalRealizedPnL / summary.historicalMaxCapitalDeployed) : 0;
   const unrealizedRoic = summary.historicalMaxCapitalDeployed > 0 ? (totalUnrealizedPnL / summary.historicalMaxCapitalDeployed) : 0;
   
@@ -89,7 +107,7 @@ export default function DashboardClient({
             activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          {t.tabOverview || '概览'}
+          {t.tabOverview}
         </button>
         <button 
           onClick={() => setActiveTab('positions')}
@@ -97,7 +115,7 @@ export default function DashboardClient({
             activeTab === 'positions' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          {t.tabPositions || '持仓'}
+          {t.tabPositions}
         </button>
         <button 
           onClick={() => setActiveTab('history')}
@@ -105,7 +123,7 @@ export default function DashboardClient({
             activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          {t.tabHistory || '交易记录'}
+          {t.tabHistory}
         </button>
       </div>
 
@@ -194,7 +212,7 @@ export default function DashboardClient({
   );
 }
 
-function MetricCard({ title, value, isPositive, icon, subRealized, subUnrealized, dict }: { title: React.ReactNode, value: string, isPositive: boolean, icon: React.ReactNode, subRealized?: string, subUnrealized?: string, dict?: any }) {
+function MetricCard({ title, value, isPositive, icon, subRealized, subUnrealized, dict }: { title: React.ReactNode, value: string, isPositive: boolean, icon: React.ReactNode, subRealized?: string, subUnrealized?: string, dict?: Dict }) {
   return (
     <div className="bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col justify-between">
       <div>

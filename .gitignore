@@ -30,6 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# database
+*.db
+*.db-journal
+
 # env files (can opt-in for committing if needed)
 .env*
 
@@ -40,4 +44,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated
 /src/generated/prisma
+
+# test scripts
+test-yf*

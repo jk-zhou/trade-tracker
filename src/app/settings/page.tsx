@@ -2,26 +2,12 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { ArrowLeft, Globe } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
-
-const DICT = {
-  en: {
-    settings: 'Settings',
-    back: 'Back to Dashboard',
-    language: 'Language',
-    languageDesc: 'Choose your preferred language for the application.',
-  },
-  zh: {
-    settings: '设置',
-    back: '返回主页',
-    language: '语言 (Language)',
-    languageDesc: '选择应用的界面语言偏好。',
-  }
-};
+import { getDict } from '@/lib/i18n';
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
   const lang = cookieStore.get('lang')?.value || 'zh';
-  const t = DICT[lang as keyof typeof DICT] || DICT.en;
+  const t = getDict(lang);
 
   return (
     <main className="min-h-screen max-w-2xl mx-auto p-4 md:p-8 space-y-8">

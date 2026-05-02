@@ -5,66 +5,12 @@ import { addTransaction } from '@/actions/transaction';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-
-const DICT = {
-  en: {
-    back: 'Back to Dashboard',
-    title: 'New Trade',
-    subtitle: 'Enter transaction details below',
-    assetType: 'Asset Type',
-    action: 'Action',
-    symbol: 'Symbol',
-    tradeDate: 'Trade Date',
-    quantity: 'Quantity',
-    contracts: '(Contracts)',
-    price: 'Price',
-    strike: 'Strike Price',
-    expiration: 'Expiration',
-    fees: 'Total Fees (Commissions)',
-    saving: 'Saving...',
-    submit: 'Submit Trade',
-    stock: 'Stock',
-    call: 'Call Option',
-    put: 'Put Option',
-    buy: 'Buy',
-    sell: 'Sell',
-    exercise: 'Exercise',
-    assignment: 'Assignment',
-    expire: 'Expire',
-    failed: 'Failed to add transaction',
-  },
-  zh: {
-    back: '返回控制面板',
-    title: '新建交易',
-    subtitle: '在下方输入交易详情',
-    assetType: '资产类型',
-    action: '操作',
-    symbol: '代码',
-    tradeDate: '交易日期',
-    quantity: '数量',
-    contracts: '(合约数)',
-    price: '价格',
-    strike: '行权价',
-    expiration: '到期日',
-    fees: '总费用 (佣金)',
-    saving: '保存中...',
-    submit: '提交交易',
-    stock: '股票',
-    call: '看涨期权 (Call)',
-    put: '看跌期权 (Put)',
-    buy: '买入 (Buy)',
-    sell: '卖出 (Sell)',
-    exercise: '行权 (Exercise)',
-    assignment: '指派 (Assignment)',
-    expire: '到期归零 (Expire)',
-    failed: '添加交易失败',
-  }
-};
+import { getDict } from '@/lib/i18n';
 
 export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const t = DICT[lang as keyof typeof DICT] || DICT.zh;
+  const t = getDict(lang);
   const [loading, setLoading] = useState(false);
 
   const initialAssetType = (searchParams.get('assetType') as any) || 'STOCK';
@@ -83,12 +29,7 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
     const formData = new FormData(e.currentTarget);
     const dateStr = formData.get('tradeDate') as string;
     
-    let qty = Number(formData.get('quantity'));
-    if (action === 'SELL') {
-      qty = -Math.abs(qty); 
-    } else {
-      qty = Math.abs(qty); 
-    }
+    const qty = Math.abs(Number(formData.get('quantity')));
 
     const data = {
       tradeDate: new Date(dateStr),
@@ -109,7 +50,7 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
     if (res.success) {
       router.push('/');
     } else {
-      alert(t.failed);
+      alert(res.error || t.failed);
     }
   };
 
@@ -121,7 +62,7 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
 
       <div>
         <h1 className="text-2xl font-bold">{t.title}</h1>
-        <p className="text-muted-foreground text-sm">{t.subtitle}</p>
+        <p className="text-muted-foreground text-sm">{t.formSubtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-card p-6 rounded-xl border border-border shadow-sm">
@@ -180,7 +121,7 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
         {assetType !== 'STOCK' && (
           <div className="grid grid-cols-2 gap-4 p-4 bg-background/50 rounded-lg border border-border/50">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-purple-400">{t.strike}</label>
+              <label className="text-sm font-medium text-purple-400">{t.strikePrice}</label>
               <input required type="number" name="strike" defaultValue={initialStrike} min="0" step="0.5" placeholder="155.00" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div className="space-y-1">

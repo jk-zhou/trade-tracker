@@ -2,18 +2,31 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { formatUTCDate, calculateAnnualizedROIC } from '@/lib/portfolioUtils';
+import { formatUTCDate, calculateAnnualizedROIC, type PortfolioSummary } from '@/lib/portfolioUtils';
+import { formatCurrency, formatPercent } from '@/lib/format';
+import type { Dict } from '@/lib/i18n';
 import TermTooltip from './TermTooltip';
 import Link from 'next/link';
 
-export default function PositionsAccordion({ positions, dict, summary }: { positions: any[], dict: any, summary: any }) {
+interface PositionWithLivePrice {
+  symbol: string;
+  assetType: 'STOCK' | 'CALL' | 'PUT';
+  quantity: number;
+  averageCost: number;
+  strike?: number | null;
+  expiration?: Date | null;
+  multiplier: number;
+  realizedPnL: number;
+  currentPrice: number;
+  unrealizedPnL: number;
+}
+
+export default function PositionsAccordion({ positions, dict, summary }: { positions: PositionWithLivePrice[], dict: Dict, summary: PortfolioSummary }) {
   const [expandedSymbols, setExpandedSymbols] = useState<Record<string, boolean>>({});
 
   const toggleSymbol = (symbol: string) => {
     setExpandedSymbols(prev => ({ ...prev, [symbol]: !prev[symbol] }));
   };
-
-  const formatCurrency = (val: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   // Group positions by symbol
   const grouped = positions.reduce((acc, pos) => {
@@ -28,7 +41,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
       acc[pos.symbol].livePrice = pos.currentPrice;
     }
     return acc;
-  }, {} as Record<string, { positions: any[], unrealizedPnL: number, realizedPnL: number, livePrice: number }>);
+  }, {} as Record<string, { positions: PositionWithLivePrice[], unrealizedPnL: number, realizedPnL: number, livePrice: number }>);
 
   if (positions.length === 0) {
     return (
@@ -42,6 +55,12 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
     <div className="space-y-4">
       {Object.entries(grouped).map(([symbol, group]) => {
         const isExpanded = expandedSymbols[symbol];
+
+        // Pre-compute ROIC values to avoid inline repetition
+        const symbolCapital = summary.symbolMaxCapitalDeployed?.[symbol] || 0;
+        const symbolRoic = symbolCapital > 0 ? group.realizedPnL / symbolCapital : 0;
+        const symbolAnnRoic = calculateAnnualizedROIC(symbolRoic, summary.symbolFirstTradeDate?.[symbol]);
+
         return (
           <div key={symbol} className="bg-card border border-border rounded-xl shadow-sm overflow-hidden transition-all duration-200">
             {/* Accordion Header (Summary) */}
@@ -58,7 +77,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                     {symbol}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    {dict.livePrice || 'Live'}: {formatCurrency(group.livePrice)}
+                    {dict.livePrice}: {formatCurrency(group.livePrice)}
                   </span>
                 </div>
               </div>
@@ -66,7 +85,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
               <div className="flex flex-row md:flex-col justify-between items-end gap-1">
                 <div className="text-right flex flex-col items-end gap-1">
                   <span className="text-xs text-muted-foreground flex items-center">
-                    {dict.combinedRealized || 'Combined Realized'} 
+                    {dict.combinedRealized} 
                     <TermTooltip term={dict.realizedPnl} explanation={dict.exp_realizedPnl} />
                   </span>
                   <span className={`font-medium ${group.realizedPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
@@ -75,7 +94,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                 </div>
                 <div className="text-right flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    {dict.combinedUnrealized || 'Combined Unrealized'}
+                    {dict.combinedUnrealized}
                   </span>
                   <span className={`font-medium ${group.unrealizedPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {group.unrealizedPnL >= 0 ? '+' : ''}{formatCurrency(group.unrealizedPnL)}
@@ -87,34 +106,18 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
               <div className="flex flex-row md:flex-col justify-between items-end gap-1 mt-2 md:mt-0 md:ml-4">
                 <div className="text-right flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {dict.realizedRoic || 'Realized ROIC'}
+                    {dict.realizedRoic}
                   </span>
-                  <span className={`text-sm font-medium ${
-                    (summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0) >= 0 
-                      ? 'text-success' : 'text-destructive'
-                  }`}>
-                    {new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(
-                      summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0
-                    )}
+                  <span className={`text-sm font-medium ${symbolRoic >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatPercent(symbolRoic)}
                   </span>
                 </div>
                 <div className="text-right flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {dict.annualizedRoic || 'Annualized ROIC'}
+                    {dict.annualizedRoic}
                   </span>
-                  <span className={`text-sm font-medium ${
-                    calculateAnnualizedROIC(
-                      summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0, 
-                      summary?.symbolFirstTradeDate?.[symbol]
-                    ) >= 0 
-                      ? 'text-success' : 'text-destructive'
-                  }`}>
-                    {new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 2 }).format(
-                      calculateAnnualizedROIC(
-                        summary?.symbolMaxCapitalDeployed?.[symbol] > 0 ? (group.realizedPnL / summary.symbolMaxCapitalDeployed[symbol]) : 0, 
-                        summary?.symbolFirstTradeDate?.[symbol]
-                      )
-                    )}
+                  <span className={`text-sm font-medium ${symbolAnnRoic >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatPercent(symbolAnnRoic)}
                   </span>
                 </div>
               </div>
@@ -158,7 +161,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                       </div>
                       {pos.assetType === 'STOCK' && (
                         <div className="text-right">
-                          <span className="block text-xs text-muted-foreground">{dict.unrealizedPnl || 'Unrealized PnL'}</span>
+                          <span className="block text-xs text-muted-foreground">{dict.unrealizedPnl}</span>
                           <span className={`font-medium text-sm ${pos.unrealizedPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
                             {pos.unrealizedPnL >= 0 ? '+' : ''}{formatCurrency(pos.unrealizedPnL)}
                           </span>
@@ -167,16 +170,16 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                       
                       <div className="flex items-center gap-2 mt-2">
                         <Link 
-                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=BUY${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + pos.expiration.toISOString() : ''}`}
+                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=BUY${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}
                           className="text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
                         >
-                          {dict.buyAction || 'Buy'}
+                          {dict.buyAction}
                         </Link>
                         <Link 
-                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=SELL${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + pos.expiration.toISOString() : ''}`}
+                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=SELL${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}
                           className="text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 rounded-md transition-colors"
                         >
-                          {dict.sellAction || 'Sell'}
+                          {dict.sellAction}
                         </Link>
                       </div>
                     </div>
