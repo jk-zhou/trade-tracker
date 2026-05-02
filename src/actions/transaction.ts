@@ -65,3 +65,20 @@ export async function getAllTransactions() {
     return [];
   }
 }
+
+export async function bulkDeleteTransactions(ids: string[]) {
+  try {
+    await prisma.transaction.deleteMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to bulk delete transactions:', error);
+    return { success: false, error: 'Failed to delete transactions' };
+  }
+}
