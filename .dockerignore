@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.env
+.DS_Store
+*.db
+*.db-journal
+test-yf*
+AGENTS.md
+CLAUDE.md
