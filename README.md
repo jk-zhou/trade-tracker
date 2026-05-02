@@ -1,5 +1,7 @@
 # Trade Tracker (交易追踪仪)
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/jk-zhou/trade-tracker)
+
 Trade Tracker 是一款现代化的全栈 Web 应用，专门为投资者设计，用于追踪股票和期权的实时持仓、计算盈亏 (PnL)、监控已用保证金 (Margin) 以及动态评估资金的回报率 (ROIC 和年化 ROIC)。
 
 ![Overview](.tempmediaStorage/media_fb5902c9-49f2-4311-ad21-c2de0e9236f4_1777721248320.png)
