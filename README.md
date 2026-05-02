@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 期权与股票追踪器 (Option Tracker)
 
-## Getting Started
+这是一个基于 [Next.js](https://nextjs.org) 开发的实时期权和股票投资组合追踪应用。
 
-First, run the development server:
+## 核心特性
+
+- **实时期权追踪**：支持追踪个股股票、看涨期权 (Call) 和看跌期权 (Put)。
+- **P2021 数据库集成**：使用 Prisma 和 SQLite 进行交易数据的事件溯源存储。
+- **实时行情**：集成 `yahoo-finance2` 获取最新的市场价格。
+- **中英双语支持**：支持根据用户偏好切换中文或英文界面。
+- **时区校准**：解决了常见的 UTC 日期偏移问题，确保交易日期显示准确。
+
+## 快速开始
+
+首先，安装依赖：
+
+```bash
+npm install
+```
+
+然后，同步数据库：
+
+```bash
+npx prisma db push
+```
+
+最后，启动开发服务器：
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开浏览器访问 [http://localhost:3000](http://localhost:3000) 即可查看结果。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 技术栈
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **框架**: Next.js 15+ (App Router)
+- **数据库**: Prisma + SQLite
+- **行情数据**: yahoo-finance2
+- **样式**: Tailwind CSS
+- **图标**: Lucide React
