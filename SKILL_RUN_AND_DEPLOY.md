@@ -4,7 +4,7 @@ This skill provides step-by-step instructions for an AI agent to run the Trade T
 
 ## Prerequisites
 
-- **Project path**: `/home/clawbot/projects/trade-tracker`
+- **Project root**: The directory containing this file (`SKILL_RUN_AND_DEPLOY.md`). All commands below assume you are running them from the project root.
 - **Runtime**: Node.js 20+, npm
 - **Docker** (for deployment only): Docker CLI available on the host
 
@@ -17,7 +17,7 @@ Execute these commands **in order**. Stop and report errors if any step fails.
 ### Step 1 — Install dependencies
 
 ```bash
-cd /home/clawbot/projects/trade-tracker && npm install
+npm install
 ```
 
 ### Step 2 — Set up the database
@@ -25,13 +25,13 @@ cd /home/clawbot/projects/trade-tracker && npm install
 The app uses SQLite via Prisma. The DATABASE_URL must point to a local file:
 
 ```bash
-cd /home/clawbot/projects/trade-tracker && DATABASE_URL="file:./dev.db" npx prisma generate && DATABASE_URL="file:./dev.db" npx prisma db push --skip-generate
+DATABASE_URL="file:./dev.db" npx prisma generate && DATABASE_URL="file:./dev.db" npx prisma db push --skip-generate
 ```
 
 ### Step 3 — Start the dev server
 
 ```bash
-cd /home/clawbot/projects/trade-tracker && DATABASE_URL="file:./dev.db" npm run dev
+DATABASE_URL="file:./dev.db" npm run dev
 ```
 
 The app will be available at **http://localhost:3000**.
@@ -47,7 +47,7 @@ Open a browser to `http://localhost:3000` and confirm the dashboard loads withou
 ### Step 1 — Build the Docker image
 
 ```bash
-cd /home/clawbot/projects/trade-tracker && docker build -t trade-tracker:latest .
+docker build -t trade-tracker:latest .
 ```
 
 This is a multi-stage build (deps → builder → runner). It typically takes 1-3 minutes.
@@ -98,8 +98,7 @@ docker push <dockerhub-username>/trade-tracker:latest
 When code changes have been made and you need to redeploy:
 
 ```bash
-cd /home/clawbot/projects/trade-tracker && \
-  docker build -t trade-tracker:latest . && \
+docker build -t trade-tracker:latest . && \
   docker stop trade-tracker && \
   docker rm trade-tracker && \
   docker run -d \
