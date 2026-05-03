@@ -30,15 +30,25 @@ DATABASE_URL="file:./dev.db" npx prisma generate && DATABASE_URL="file:./dev.db"
 
 ### Step 3 — Start the dev server
 
+First, ensure port 3000 is free. If a previous dev server is still running, kill it:
+
+```bash
+lsof -ti :3000 | xargs kill -9 2>/dev/null; echo "Port 3000 cleared"
+```
+
+Then start:
+
 ```bash
 DATABASE_URL="file:./dev.db" npx next dev --hostname 0.0.0.0
 ```
 
 The app will be available at **http://localhost:3000** and from other devices on the LAN at **http://<host-ip>:3000**.
 
+> **⚠️ IMPORTANT**: The first page load in dev mode triggers compilation + Yahoo Finance API calls, which can take **60-90 seconds**. The browser will appear to hang — this is normal. Subsequent loads will be fast (~400ms).
+
 ### Step 4 — Verify
 
-Open a browser to `http://localhost:3000` and confirm the dashboard loads without errors. The page may take a few seconds on first load as it fetches market data from Yahoo Finance.
+Open a browser to `http://localhost:3000` and **wait up to 90 seconds** for the first load to compile. Once loaded, confirm the dashboard shows positions and market data.
 
 ---
 
