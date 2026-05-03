@@ -31,10 +31,10 @@ DATABASE_URL="file:./dev.db" npx prisma generate && DATABASE_URL="file:./dev.db"
 ### Step 3 — Start the dev server
 
 ```bash
-DATABASE_URL="file:./dev.db" npm run dev
+DATABASE_URL="file:./dev.db" npx next dev --hostname 0.0.0.0
 ```
 
-The app will be available at **http://localhost:3000**.
+The app will be available at **http://localhost:3000** and from other devices on the LAN at **http://<host-ip>:3000**.
 
 ### Step 4 — Verify
 

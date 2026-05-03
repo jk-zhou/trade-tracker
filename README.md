@@ -37,10 +37,10 @@ npx prisma db push
 ### 3. 启动开发服务器
 
 ```bash
-npm run dev
+npx next dev --hostname 0.0.0.0
 ```
 
-打开浏览器访问 [http://localhost:3000](http://localhost:3000) 即可查看结果。
+打开浏览器访问 [http://localhost:3000](http://localhost:3000)，或在局域网内其他设备通过 `http://<服务器IP>:3000` 访问。
 
 ---
 
