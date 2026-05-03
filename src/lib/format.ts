@@ -15,7 +15,12 @@ export function formatCurrency(
 }
 
 export function formatCurrencyCompact(val: number): string {
-  return formatCurrency(val, 0);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(val);
 }
 
 export function formatPercent(
