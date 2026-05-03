@@ -50,9 +50,20 @@ The app will be available at **http://localhost:3000** and from other devices on
 
 Open a browser to `http://localhost:3000` and **wait up to 90 seconds** for the first load to compile. Once loaded, confirm the dashboard shows positions and market data.
 
+> **Note on LAN access**: You can access this dev server via `http://<host-ip>:3000`. However, you may see WebSocket connection errors in the console because Next.js dev mode (Turbopack) struggles with LAN HMR. If you just want to *use* the app on your LAN, **Option A.5 (Local Production)** is highly recommended instead.
+
 ---
 
-## Option B: Build & Deploy Docker Image
+## Option A.5: Run Locally (Production Mode) - Recommended for LAN
+
+If you are not actively editing code and just want to use the app over your local network, run the production build. This is **much faster** and avoids the WebSocket/HMR bugs.
+
+```bash
+DATABASE_URL="file:./dev.db" npm run build
+DATABASE_URL="file:./dev.db" npx next start --hostname 0.0.0.0
+```
+
+The app will instantly be available at **http://<host-ip>:3000**.
 
 ### Step 1 — Build the Docker image
 
@@ -132,3 +143,5 @@ Data is preserved because the SQLite database lives on the mapped host volume, n
 | `prisma db push` fails with schema error | Schema change may be incompatible | Check `prisma/schema.prisma` for syntax errors, then retry |
 | Container starts but port 3000 is not reachable | Port conflict | Check `docker ps` and ensure no other container uses port 3000 |
 | Database file permissions error in Docker | Volume ownership mismatch | Ensure the host directory is writable: `chmod 777 /mnt/user/appdata/trade-tracker` |
+| `WebSocket connection to ... failed` in dev mode | Next.js Turbopack LAN bug | Ignore it (it only affects auto-reload) or use **Option A.5** (Production mode) instead. |
+| Cannot click tabs / Page unresponsive | Invisible Dev Overlay blocking clicks | Check console for warnings. Restart server. Use **Option A.5** to avoid dev overlays. |

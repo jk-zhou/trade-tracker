@@ -72,7 +72,7 @@ export default function PerformanceChart({ data, dict, sp500Data, nasdaqData }: 
         </div>
       </div>
       <div className="h-[350px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
           <LineChart data={filteredData} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} stroke="#888888" fontSize={14} tickMargin={12} minTickGap={30} />
