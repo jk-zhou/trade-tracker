@@ -24,7 +24,8 @@
 
 ### 1.4 多语言支持 (i18n)
 - 任何新增的页面文本**必须**包含中英双语。
-- 文本通常存储在页面或组件顶部的 `DICT` 常量中。
+- 所有翻译文本集中定义在 `src/lib/i18n.ts` 的 `DICT` 对象中，不要在组件内创建独立的字典。
+- 使用 `getDict(lang)` 获取当前语言的字典。
 - 获取当前语言的模式：Server Component 通过 `cookies().get('lang')` 读取，Client Component 通过传入的 `lang` 或 `dict` props 接收。
 
 ---

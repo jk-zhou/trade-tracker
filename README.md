@@ -10,10 +10,11 @@ Trade Tracker 是一款现代化的全栈 Web 应用，专门为投资者设计�
 
 ## 🤖 专属 Agent 交接指南 (For AI Agents)
 
-**如果你是接手此项目的新 AI Agent，请在进行任何实质性代码修改前，务必先阅读以下两份核心文档：**
+**如果你是接手此项目的新 AI Agent，请在进行任何实质性代码修改前，务必先阅读以下核心文档：**
 
-1. **[👉 架构核心指南 (DESIGN.md)](./DESIGN.md)**：包含项目的“单表事件溯源”设计理念、底层算法与防坑指南。
+1. **[👉 架构核心指南 (DESIGN.md)](./DESIGN.md)**：包含项目的"单表事件溯源"设计理念、底层算法与防坑指南。
 2. **[👉 开发规范与最佳实践 (DEVELOPMENT.md)](./DEVELOPMENT.md)**：包含 Git 提交规范、Next.js 15+ 最佳实践与 i18n 多语言开发要求。
+3. **[👉 运行与部署技能 (SKILL_RUN_AND_DEPLOY.md)](./SKILL_RUN_AND_DEPLOY.md)**：一键式指令手册，可直接按步骤执行以启动本地开发环境或构建 Docker 部署镜像。
 
 ---
 
