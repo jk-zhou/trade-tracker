@@ -49,3 +49,7 @@ next-env.d.ts
 
 # test scripts
 test-yf*
+
+# project specific
+APP_ISSUES.md
+trading_log.csv
