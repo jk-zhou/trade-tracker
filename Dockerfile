@@ -25,12 +25,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-# Install openssl for runtime
+# Install openssl and prisma CLI for runtime db push
 RUN apk add --no-cache openssl
-
-# Copy prisma CLI from builder (keeps version in sync with package.json)
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+RUN npm install -g prisma@6.19.3
 
 ENV NODE_ENV=production
 # Default database URL for Docker; this maps to the persistent volume
