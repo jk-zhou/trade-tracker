@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addTransaction } from '@/actions/transaction';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -17,17 +17,39 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
   const initialAction = (searchParams.get('action') as any) || 'BUY';
   const initialSymbol = searchParams.get('symbol') || '';
   const initialStrike = searchParams.get('strike') || '';
-  const initialExpiration = searchParams.get('expiration') ? searchParams.get('expiration')?.split('T')[0] : '';
+  const initialExpiration = searchParams.get('expiration')?.split('T')[0] || '';
 
   const [assetType, setAssetType] = useState<'STOCK' | 'CALL' | 'PUT'>(initialAssetType);
   const [action, setAction] = useState<'BUY' | 'SELL' | 'EXERCISE' | 'ASSIGNMENT' | 'EXPIRATION'>(initialAction);
+
+  const [tradeDate, setTradeDate] = useState<string>(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  const [price, setPrice] = useState<string>('');
+  const [expiration, setExpiration] = useState<string>(initialExpiration);
+
+  const isPriceForcedZero = action === 'EXERCISE' || action === 'ASSIGNMENT' || action === 'EXPIRATION';
+  const isDateForced = action === 'EXPIRATION';
+
+  useEffect(() => {
+    if (isPriceForcedZero) {
+      setPrice('0');
+    }
+    
+    if (isDateForced && expiration) {
+      setTradeDate(`${expiration}T16:00`);
+    }
+  }, [action, expiration, isPriceForcedZero, isDateForced]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const dateStr = formData.get('tradeDate') as string;
+    const dateStr = isDateForced ? tradeDate : (formData.get('tradeDate') as string);
+    const submittedPrice = isPriceForcedZero ? 0 : Number(formData.get('price'));
     
     const qty = Math.abs(Number(formData.get('quantity')));
 
@@ -37,9 +59,9 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
       assetType,
       action,
       quantity: qty,
-      price: Number(formData.get('price')),
+      price: submittedPrice,
       strike: formData.get('strike') ? Number(formData.get('strike')) : undefined,
-      expiration: formData.get('expiration') ? new Date(formData.get('expiration') as string) : undefined,
+      expiration: expiration ? new Date(expiration) : undefined,
       multiplier: formData.get('multiplier') ? Number(formData.get('multiplier')) : (assetType === 'STOCK' ? 1 : 100),
       fees: Number(formData.get('fees') || 0),
     };
@@ -103,7 +125,15 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">{t.tradeDate}</label>
-            <input required type="date" name="tradeDate" defaultValue={new Date().toISOString().split('T')[0]} className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+            <input 
+              required 
+              type="datetime-local" 
+              name="tradeDate" 
+              value={tradeDate}
+              onChange={(e) => setTradeDate(e.target.value)}
+              readOnly={isDateForced}
+              className={`w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] ${isDateForced ? 'opacity-50 cursor-not-allowed' : ''}`}
+            />
           </div>
         </div>
 
@@ -114,7 +144,18 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">{t.price}</label>
-            <input required type="number" name="price" min="0" step="0.0001" placeholder="150.00" className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
+            <input 
+              required 
+              type="number" 
+              name="price" 
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              readOnly={isPriceForcedZero}
+              min="0" 
+              step="0.0001" 
+              placeholder="150.00" 
+              className={`w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none ${isPriceForcedZero ? 'opacity-50 cursor-not-allowed' : ''}`}
+            />
           </div>
         </div>
 
@@ -126,7 +167,14 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-purple-400">{t.expiration}</label>
-              <input required type="date" name="expiration" defaultValue={initialExpiration} className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              <input 
+                required 
+                type="date" 
+                name="expiration" 
+                value={expiration}
+                onChange={(e) => setExpiration(e.target.value)}
+                className="w-full bg-input border-transparent rounded-md px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" 
+              />
             </div>
           </div>
         )}
@@ -143,6 +191,14 @@ export default function TransactionForm({ lang = 'zh' }: { lang?: string }) {
         >
           {loading ? t.saving : t.submit}
         </button>
+
+        {(action === 'EXERCISE' || action === 'ASSIGNMENT') && (
+          <div className="mt-4 p-3 bg-success/10 border border-success/20 rounded-md text-sm text-success-foreground">
+            <strong>{lang === 'zh' ? '自动化提示：' : 'Auto-Sync:'}</strong> {lang === 'zh' 
+              ? '系统已自动为您计算并记录了对应的正股买入/卖出交易（按行权价计算），无需手动添加。' 
+              : 'The system has automatically recorded the corresponding stock BUY/SELL transaction at the strike price for you.'}
+          </div>
+        )}
       </form>
     </div>
   );

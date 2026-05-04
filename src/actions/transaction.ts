@@ -67,27 +67,61 @@ export async function addTransaction(rawData: {
   try {
     // Normalize quantity sign based on action
     let quantity = data.quantity;
-    if (data.action === 'SELL') {
+    if (data.action === 'SELL' || data.action === 'EXERCISE') {
       quantity = -Math.abs(quantity);
+    } else if (data.action === 'BUY' || data.action === 'ASSIGNMENT') {
+      quantity = Math.abs(quantity);
     }
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        groupId: data.groupId,
-        tradeDate: data.tradeDate,
-        symbol: data.symbol,
-        assetType: data.assetType,
-        action: data.action,
-        quantity,
-        price: data.price,
-        strike: data.strike,
-        expiration: data.expiration,
-        multiplier: data.multiplier ?? (data.assetType === 'STOCK' ? 1 : 100),
-        fees: data.fees ?? 0,
-      },
+    const transaction = await prisma.$transaction(async (tx) => {
+      // 1. Create the primary option transaction
+      const primaryTx = await tx.transaction.create({
+        data: {
+          groupId: data.groupId,
+          tradeDate: data.tradeDate,
+          symbol: data.symbol,
+          assetType: data.assetType,
+          action: data.action,
+          quantity,
+          price: data.price,
+          strike: data.strike,
+          expiration: data.expiration,
+          multiplier: data.multiplier ?? (data.assetType === 'STOCK' ? 1 : 100),
+          fees: data.fees ?? 0,
+        },
+      });
+
+      // 2. Automatically create the corresponding stock transaction for Exercise/Assignment
+      if (data.action === 'EXERCISE' || data.action === 'ASSIGNMENT') {
+        let stockAction: 'BUY' | 'SELL';
+        if (data.action === 'EXERCISE') {
+          stockAction = data.assetType === 'CALL' ? 'BUY' : 'SELL';
+        } else {
+          stockAction = data.assetType === 'CALL' ? 'SELL' : 'BUY';
+        }
+
+        const multiplier = data.multiplier ?? 100;
+        const stockQty = data.quantity * multiplier;
+        const signedStockQty = stockAction === 'SELL' ? -Math.abs(stockQty) : Math.abs(stockQty);
+
+        await tx.transaction.create({
+          data: {
+            tradeDate: data.tradeDate,
+            symbol: data.symbol,
+            assetType: 'STOCK',
+            action: stockAction,
+            quantity: signedStockQty,
+            price: data.strike || 0,
+            multiplier: 1,
+            fees: 0,
+          }
+        });
+      }
+
+      return primaryTx;
     });
 
-    revalidatePath('/'); // Revalidate dashboard and all paths depending on this
+    revalidatePath('/'); 
     return { success: true, transaction };
   } catch (error) {
     console.error('Failed to add transaction:', error);

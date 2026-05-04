@@ -20,6 +20,8 @@ export interface PortfolioSummary {
   firstTradeDate: Date | null;
   symbolMaxCapitalDeployed: Record<string, number>;
   symbolFirstTradeDate: Record<string, Date>;
+  symbolLastTradeDate: Record<string, Date>;
+  symbolRealizedPnL: Record<string, number>;
 }
 
 // Helper to uniquely identify an option contract or stock
@@ -150,17 +152,21 @@ export function analyzePortfolio(transactions: Transaction[]): PortfolioSummary 
 
   const symbolMaxCapitalDeployed: Record<string, number> = {};
   const symbolFirstTradeDate: Record<string, Date> = {};
+  const symbolLastTradeDate: Record<string, Date> = {};
+  const symbolRealizedPnL: Record<string, number> = {};
 
   for (const t of sorted) {
     if (!symbolFirstTradeDate[t.symbol]) {
       symbolFirstTradeDate[t.symbol] = t.tradeDate;
     }
+    symbolLastTradeDate[t.symbol] = t.tradeDate;
 
     const key = getPositionKey(t);
     const pos = positions.get(key) || createDefaultPosition(t);
 
     const pnl = processTransaction(pos, t);
     totalRealizedPnL += pnl;
+    symbolRealizedPnL[t.symbol] = (symbolRealizedPnL[t.symbol] || 0) + pnl;
 
     positions.set(key, pos);
 
@@ -200,12 +206,14 @@ export function analyzePortfolio(transactions: Transaction[]): PortfolioSummary 
     firstTradeDate,
     symbolMaxCapitalDeployed,
     symbolFirstTradeDate,
+    symbolLastTradeDate,
+    symbolRealizedPnL,
   };
 }
 
-export function calculateAnnualizedROIC(roic: number, firstTradeDate: Date | null): number {
+export function calculateAnnualizedROIC(roic: number, firstTradeDate: Date | null, endDate: Date = new Date()): number {
   if (!firstTradeDate) return 0;
-  const days = differenceInDays(new Date(), firstTradeDate);
+  const days = differenceInDays(endDate, firstTradeDate);
   if (days <= 0) return roic * 365; // prevent infinity
   return roic * (365 / days);
 }

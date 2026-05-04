@@ -47,6 +47,7 @@ export const DICT = {
     'YTD': 'YTD',
     '1Y': '1Y',
     'ALL': 'ALL',
+    assetPerformance: 'Asset Performance',
 
     // Transaction Form
     back: 'Back to Dashboard',
@@ -143,6 +144,7 @@ export const DICT = {
     'YTD': '今年',
     '1Y': '近1年',
     'ALL': '全部',
+    assetPerformance: '标的表现 (Asset Performance)',
 
     // Transaction Form
     back: '返回控制面板',

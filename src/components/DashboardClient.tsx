@@ -133,57 +133,22 @@ export default function DashboardClient({
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <MetricCard 
-                title={<span className="flex items-center">{t.totalPnl} <TermTooltip term={t.totalPnl} explanation={t.exp_totalPnl} /></span>} 
-                value={formatCurrency(totalPnL)} 
-                isPositive={totalPnL >= 0}
-                icon={<DollarSign size={16} />}
-                subRealized={formatCurrency(summary.totalRealizedPnL)}
-                subUnrealized={formatCurrency(totalUnrealizedPnL)}
-                dict={t}
-              />
-              <MetricCard 
-                title={<span className="flex items-center">{t.totalRoic} <TermTooltip term={t.totalRoic} explanation={t.exp_totalRoic} /></span>} 
-                value={formatPercent(roic)} 
-                isPositive={roic >= 0}
-                icon={<Activity size={16} />}
-                subRealized={formatPercent(realizedRoic)}
-                subUnrealized={formatPercent(unrealizedRoic)}
-                dict={t}
-              />
-              <MetricCard 
-                title={<span className="flex items-center">{t.annualizedRoic} <TermTooltip term={t.annualizedRoic} explanation={t.exp_annualizedRoic} /></span>} 
-                value={formatPercent(annualizedRoic)} 
-                isPositive={annualizedRoic >= 0}
-                icon={<TrendingUp size={16} />}
-                subRealized={formatPercent(annRealizedRoic)}
-                subUnrealized={formatPercent(annUnrealizedRoic)}
-                dict={t}
-              />
-              <div className="bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col justify-between">
-                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider flex items-center">
-                  {t.marginUtilized} <TermTooltip term={t.marginUtilized} explanation={t.exp_marginUtilized} />
-                </span>
-                <span className="text-xl font-semibold mt-1">{formatCurrency(summary.currentMarginLocked)}</span>
-                <span className="text-xs text-muted-foreground mt-1 flex items-center">
-                  {t.max}: {formatCurrency(summary.historicalMaxCapitalDeployed)}
-                  <TermTooltip term={t.max} explanation={t.exp_max} />
-                </span>
-              </div>
-            </div>
-
             <PerformanceChart 
               data={performanceHistory} 
               dict={t} 
               sp500Data={sp500Data} 
               nasdaqData={nasdaqData} 
+              summary={summary}
+              totalUnrealizedPnL={totalUnrealizedPnL}
             />
+
             
             <CalendarPnL 
               data={performanceHistory} 
               dict={t} 
             />
+            
+            <AssetPerformanceList summary={summary} dict={t} />
           </div>
         )}
 
@@ -212,34 +177,51 @@ export default function DashboardClient({
   );
 }
 
-function MetricCard({ title, value, isPositive, icon, subRealized, subUnrealized, dict }: { title: React.ReactNode, value: string, isPositive: boolean, icon: React.ReactNode, subRealized?: string, subUnrealized?: string, dict?: Dict }) {
+function AssetPerformanceList({ summary, dict }: { summary: PortfolioSummary, dict: Dict }) {
+  const symbols = Object.keys(summary.symbolRealizedPnL || {}).sort((a, b) => summary.symbolRealizedPnL[b] - summary.symbolRealizedPnL[a]);
+  
+  if (symbols.length === 0) return null;
+
   return (
-    <div className="bg-card border border-border p-4 rounded-xl shadow-sm flex flex-col justify-between">
-      <div>
-        <div className="flex items-center text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2">
-          <span className="mr-1">{icon}</span>
-          {title}
-        </div>
-        <span className={`text-2xl font-bold ${isPositive ? 'text-success' : 'text-destructive'}`}>
-          {isPositive ? '+' : ''}{value}
-        </span>
+    <div className="bg-card border border-border p-4 md:p-6 rounded-xl shadow-sm mb-6 mt-6">
+      <h2 className="text-xl font-bold mb-4">{dict.assetPerformance || '标的表现 (Asset Performance)'}</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
+            <tr>
+              <th className="px-4 py-3 rounded-tl-lg">{dict.symbol}</th>
+              <th className="px-4 py-3 text-right">{dict.realizedPnl}</th>
+              <th className="px-4 py-3 text-right">{dict.realizedRoic}</th>
+              <th className="px-4 py-3 text-right rounded-tr-lg">{dict.annualizedRoic}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {symbols.map(sym => {
+              const pnl = summary.symbolRealizedPnL[sym] || 0;
+              const maxCap = summary.symbolMaxCapitalDeployed[sym] || 0;
+              const roic = maxCap > 0 ? pnl / maxCap : 0;
+              
+              const hasOpenPosition = summary.positions.some(p => p.symbol === sym);
+              const endDate = hasOpenPosition ? new Date() : summary.symbolLastTradeDate[sym];
+              const annRoic = calculateAnnualizedROIC(roic, summary.symbolFirstTradeDate[sym], endDate);
+              return (
+                <tr key={sym} className="border-b border-border/50 hover:bg-muted/20">
+                  <td className="px-4 py-3 font-medium">{sym}</td>
+                  <td className={`px-4 py-3 text-right ${pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
+                  </td>
+                  <td className={`px-4 py-3 text-right ${roic >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatPercent(roic)}
+                  </td>
+                  <td className={`px-4 py-3 text-right ${annRoic >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatPercent(annRoic)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-      {(subRealized || subUnrealized) && (
-        <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted-foreground">
-          <div className="flex justify-between">
-            <span className="opacity-80">{dict?.realizedLabel || 'R:'}</span>
-            <span className={`font-medium ${subRealized?.startsWith('-') ? 'text-destructive/80' : 'text-success/80'}`}>
-              {!subRealized?.startsWith('-') && subRealized !== '0%' && subRealized !== '$0.00' ? '+' : ''}{subRealized}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="opacity-80">{dict?.unrealizedLabel || 'U:'}</span>
-            <span className={`font-medium ${subUnrealized?.startsWith('-') ? 'text-destructive/80' : 'text-success/80'}`}>
-              {!subUnrealized?.startsWith('-') && subUnrealized !== '0%' && subUnrealized !== '$0.00' ? '+' : ''}{subUnrealized}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

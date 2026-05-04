@@ -5,6 +5,7 @@ import { deleteTransaction, bulkDeleteTransactions } from '@/actions/transaction
 import { formatUTCDate } from '@/lib/portfolioUtils';
 import { formatCurrency } from '@/lib/format';
 import { getDict } from '@/lib/i18n';
+import { format } from 'date-fns';
 import { ArrowLeft, Trash2, Search, Filter, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
@@ -286,10 +287,11 @@ export default function HistoryClient({ initialTransactions, lang = 'zh', isEmbe
                   <div className="text-sm text-muted-foreground mt-1">
                     {tx.quantity} {t.units} @ {formatCurrency(tx.price)}
                     {tx.strike && ` • ${t.strike} ${tx.strike}`}
+                    {tx.expiration && ` • ${t.exp} ${formatUTCDate(tx.expiration, 'yyyy-MM-dd')}`}
                     {tx.fees > 0 && ` • ${t.fees} ${formatCurrency(tx.fees)}`}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {formatUTCDate(tx.tradeDate, 'PP')}
+                    {format(new Date(tx.tradeDate), 'yyyy-MM-dd HH:mm')}
                   </div>
                 </div>
               </div>

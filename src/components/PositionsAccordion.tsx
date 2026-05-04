@@ -84,15 +84,6 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
 
               <div className="flex flex-row md:flex-col justify-between items-end gap-1">
                 <div className="text-right flex flex-col items-end gap-1">
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    {dict.combinedRealized} 
-                    <TermTooltip term={dict.realizedPnl} explanation={dict.exp_realizedPnl} />
-                  </span>
-                  <span className={`font-medium ${group.realizedPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {group.realizedPnL >= 0 ? '+' : ''}{formatCurrency(group.realizedPnL)}
-                  </span>
-                </div>
-                <div className="text-right flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
                     {dict.combinedUnrealized}
                   </span>
@@ -102,25 +93,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                 </div>
               </div>
 
-              {/* Symbol ROIC Metrics */}
-              <div className="flex flex-row md:flex-col justify-between items-end gap-1 mt-2 md:mt-0 md:ml-4">
-                <div className="text-right flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {dict.realizedRoic}
-                  </span>
-                  <span className={`text-sm font-medium ${symbolRoic >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatPercent(symbolRoic)}
-                  </span>
-                </div>
-                <div className="text-right flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {dict.annualizedRoic}
-                  </span>
-                  <span className={`text-sm font-medium ${symbolAnnRoic >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatPercent(symbolAnnRoic)}
-                  </span>
-                </div>
-              </div>
+
             </div>
 
             {/* Accordion Body (Individual Positions) */}
@@ -150,15 +123,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                     </div>
 
                     <div className="flex flex-row md:flex-col justify-between items-end gap-1">
-                      <div className="text-right flex flex-col items-end">
-                        <span className="text-xs text-muted-foreground flex items-center">
-                          {dict.realizedPnl}
-                          <TermTooltip term={dict.realizedPnl} explanation={dict.exp_realizedPnl} />
-                        </span>
-                        <span className={`font-medium text-sm mt-0.5 ${pos.realizedPnL >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {pos.realizedPnL >= 0 ? '+' : ''}{formatCurrency(pos.realizedPnL)}
-                        </span>
-                      </div>
+
                       {pos.assetType === 'STOCK' && (
                         <div className="text-right">
                           <span className="block text-xs text-muted-foreground">{dict.unrealizedPnl}</span>
@@ -169,18 +134,27 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                       )}
                       
                       <div className="flex items-center gap-2 mt-2">
-                        <Link 
-                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=BUY${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}
-                          className="text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
+                        <select 
+                          className="text-xs font-medium bg-muted text-foreground border border-border px-2 py-1.5 rounded-md cursor-pointer outline-none focus:ring-1 focus:ring-primary appearance-none pr-6 relative"
+                          style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right .5rem top 50%', backgroundSize: '.65rem auto' }}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              window.location.href = e.target.value;
+                            }
+                          }}
+                          defaultValue=""
                         >
-                          {dict.buyAction}
-                        </Link>
-                        <Link 
-                          href={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=SELL${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}
-                          className="text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 rounded-md transition-colors"
-                        >
-                          {dict.sellAction}
-                        </Link>
+                          <option value="" disabled>{dict.action}</option>
+                          <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=BUY${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.buy}</option>
+                          <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=SELL${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.sell}</option>
+                          {pos.assetType !== 'STOCK' && (
+                            <>
+                              <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=EXERCISE${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.exercise}</option>
+                              <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=ASSIGNMENT${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.assignment}</option>
+                              <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=EXPIRATION${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.expire}</option>
+                            </>
+                          )}
+                        </select>
                       </div>
                     </div>
                   </div>
