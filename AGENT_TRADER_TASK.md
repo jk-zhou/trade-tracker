@@ -17,7 +17,7 @@
 - **唯一数据源**：仅使用 `yfinance` 获取股价、期权链及新闻。
 - **交互方式**：
   - **市场分析**：可编写脚本自动化抓取 `yfinance` 数据。
-  - **下单记录**：**必须通过浏览器**访问 `http://localhost:3000` 手动操作 UI。严禁直接调用 API 或修改数据库。
+  - **下单记录**：**必须通过浏览器**访问 `http://localhost:3000` 手动操作 UI。严禁直接调用 API 或修改数据库。请务必参考 **[SKILL_FOR_BROWSER_AGENTS.md](./SKILL_FOR_BROWSER_AGENTS.md)** 以解决浏览器沙箱错误并获取 UI 元素定位指南。
 
 ### 4. 交易范围与策略
 - **限定标的**：NVDA, AMD, GOOG, MSFT, INTC, ADBE, GLD。
