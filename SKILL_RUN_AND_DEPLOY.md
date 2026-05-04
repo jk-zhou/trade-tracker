@@ -25,7 +25,7 @@ npm install
 The app uses SQLite via Prisma. The DATABASE_URL must point to a local file:
 
 ```bash
-DATABASE_URL="file:./dev.db" npx prisma generate && DATABASE_URL="file:./dev.db" npx prisma db push --skip-generate
+DATABASE_URL="file:./dev.db" npx prisma generate && DATABASE_URL="file:./dev.db" npx prisma db push
 ```
 
 ### Step 3 — Start the dev server

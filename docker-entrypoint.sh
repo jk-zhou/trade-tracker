@@ -5,7 +5,7 @@ set -e
 echo "Applying database migrations to /app/data/trade-tracker.db..."
 npx prisma migrate deploy 2>/dev/null || {
   echo "No migrations found, using db push (safe mode)..."
-  npx prisma db push --skip-generate
+  npx prisma db push
 }
 
 echo "Starting Trade Tracker..."
