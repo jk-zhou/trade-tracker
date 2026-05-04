@@ -27,7 +27,7 @@ WORKDIR /app
 
 # Install openssl and prisma CLI for runtime db push
 RUN apk add --no-cache openssl
-RUN npm install -g prisma
+RUN npm install -g prisma@6.19.3
 
 ENV NODE_ENV=production
 # Default database URL for Docker; this maps to the persistent volume
