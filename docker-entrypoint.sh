@@ -1,24 +1,23 @@
 #!/bin/sh
 set -e
 
-# Default to 1000 if not provided
-USER_ID=${PUID:-1000}
-GROUP_ID=${PGID:-1000}
-
-echo "Configuring user permissions... (PUID: $USER_ID, PGID: $GROUP_ID)"
-
-# Update group and user
-groupmod -o -g "$GROUP_ID" nodejs > /dev/null 2>&1
-usermod -o -u "$USER_ID" nextjs > /dev/null 2>&1
-
-# Ensure data directory and its contents are owned by the app user
-# This is crucial for volume mounts that might have incorrect permissions
-mkdir -p /app/data
-chown -R nextjs:nodejs /app/data
-chown -R nextjs:nodejs /app/.next
+# Update UID/GID if provided
+if [ -n "$PUID" ] && [ "$(id -u nextjs)" != "$PUID" ]; then
+    echo "Updating nextjs UID to $PUID..."
+    usermod -o -u "$PUID" nextjs
+fi
+if [ -n "$PGID" ] && [ "$(getent group nodejs | cut -d: -f3)" != "$PGID" ]; then
+    echo "Updating nodejs GID to $PGID..."
+    groupmod -o -g "$PGID" nodejs
+fi
 
 DATA_DIR="/app/data"
 DB_FILE="$DATA_DIR/trade-tracker.db"
+
+# Ensure directories exist and are owned by the correct user
+mkdir -p "$DATA_DIR"
+chown -R nextjs:nodejs "$DATA_DIR"
+chown -R nextjs:nodejs /app/.next
 
 # Apply database migrations safely (without accepting data loss)
 echo "Applying database migrations to $DB_FILE..."
@@ -27,5 +26,5 @@ su-exec nextjs npx prisma migrate deploy 2>/dev/null || {
   su-exec nextjs npx prisma db push
 }
 
-echo "Starting Trade Tracker..."
+echo "Starting Trade Tracker (as nextjs user)..."
 exec su-exec nextjs node server.js
