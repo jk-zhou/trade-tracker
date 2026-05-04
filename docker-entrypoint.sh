@@ -3,9 +3,9 @@ set -e
 
 # Apply database migrations safely (without accepting data loss)
 echo "Applying database migrations to /app/data/trade-tracker.db..."
-npx prisma migrate deploy 2>/dev/null || {
+./node_modules/prisma/build/index.js migrate deploy 2>/dev/null || {
   echo "No migrations found, using db push (safe mode)..."
-  npx prisma db push
+  ./node_modules/prisma/build/index.js db push
 }
 
 echo "Starting Trade Tracker..."

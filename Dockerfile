@@ -25,9 +25,12 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-# Install openssl and prisma CLI for runtime db push
+# Install openssl for runtime
 RUN apk add --no-cache openssl
-RUN npm install -g prisma@6.19.3
+
+# Copy prisma CLI from builder (keeps version in sync with package.json)
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 ENV NODE_ENV=production
 # Default database URL for Docker; this maps to the persistent volume
@@ -50,8 +53,9 @@ RUN chown nextjs:nodejs .next
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Copy Prisma schema
+# Copy Prisma schema & engine binaries needed for db push
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 # Entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
