@@ -6,7 +6,7 @@ import { formatUTCDate } from '@/lib/portfolioUtils';
 import { formatCurrency } from '@/lib/format';
 import { getDict } from '@/lib/i18n';
 import { format } from 'date-fns';
-import { ArrowLeft, Trash2, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Trash2, Search, Filter, ArrowUpDown, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
 
@@ -283,6 +283,11 @@ export default function HistoryClient({ initialTransactions, lang = 'zh', isEmbe
                        tx.action === 'EXERCISE' ? t.exercise : tx.action === 'ASSIGNMENT' ? t.assignment : 
                        tx.action === 'EXPIRATION' ? t.expiration : tx.action}
                     </span>
+                    {tx.groupId && (
+                      <span title={lang === 'zh' ? '该交易属于一笔组合订单 (例如展期/价差)' : 'Part of a grouped order (e.g., Roll/Spread)'} className="ml-2 inline-flex items-center">
+                        <Link2 size={16} className="text-muted-foreground opacity-50" />
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     {tx.quantity} {t.units} @ {formatCurrency(tx.price)}

@@ -18,6 +18,7 @@
 - `action`: 操作行为（`BUY`, `SELL`, `EXERCISE`, `ASSIGNMENT`, `EXPIRATION`）。
 - `quantity`: 交易数量（负数代表卖出/做空，正数代表买入/做多）。
 - `price`, `strike`, `expiration`, `multiplier`, `fees`: 其他计算必备的金融要素。
+- `groupId`: 组合交易标识符 (UUID)。用于将多条独立的流水（如展期中的“平仓”与“开仓”）在逻辑上绑定在一起。
 
 ## 3. 核心计算逻辑 (`src/lib/portfolioUtils.ts`)
 
@@ -33,6 +34,7 @@
 - 系统在遍历流水时，会记录出现过的**历史最高并发占用资金 (historicalMaxCapitalDeployed)**。这也就是用户的“总投入本金池”。
 - **总回报率 (ROIC)** = 总盈亏 / 历史最大占用资金。
 - **年化回报率 (Annualized ROIC)** = ROIC × (365 / 距离首笔交易的天数)。
+- **组合交易 (Composite Transactions)**：对于 Roll (展期) 或 Spread (价差)，系统会同时产生两条流水。虽然它们在底层是独立记录，但在 UI 层通过 `groupId` 进行关联展示，并且在录入时通过 `prisma.$transaction` 保证原子性。
 
 ## 4. 行情数据层 (`src/lib/marketData.ts`)
 

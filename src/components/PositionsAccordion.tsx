@@ -152,6 +152,7 @@ export default function PositionsAccordion({ positions, dict, summary }: { posit
                               <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=EXERCISE${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.exercise}</option>
                               <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=ASSIGNMENT${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.assignment}</option>
                               <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=EXPIRATION${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.expire}</option>
+                              <option value={`/trade?symbol=${pos.symbol}&assetType=${pos.assetType}&action=ROLL${pos.strike ? '&strike=' + pos.strike : ''}${pos.expiration ? '&expiration=' + new Date(pos.expiration).toISOString() : ''}`}>{dict.roll}</option>
                             </>
                           )}
                         </select>

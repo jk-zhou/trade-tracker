@@ -16,6 +16,7 @@
   2. 运行 `npx prisma db push` 更新本地 SQLite 结构并重新生成 Client。
   3. 更新所有涉及到新字段的前后端逻辑（如 `src/actions/transaction.ts`）。
 - **不可改变事件溯源原则**。业务逻辑应通过**追加交易流水**实现，切勿破坏已有的核心推演模型。
+- **组合交易录入**：若新增涉及多个腿的复杂策略（如 Spread/Straddle），应优先在 `src/actions/transaction.ts` 中使用 `rollTransaction` 方法（或其变体），通过 `prisma.$transaction` 确保多条流水的原子性提交，并统一分配 `groupId`。
 
 ### 1.3 样式系统 (TailwindCSS)
 - 项目使用 TailwindCSS v4。

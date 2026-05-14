@@ -129,6 +129,59 @@ export async function addTransaction(rawData: {
   }
 }
 
+export async function rollTransaction(legs: any[]) {
+  if (legs.length !== 2) {
+    return { success: false, error: 'A roll requires exactly two legs.' };
+  }
+
+  const parsedLeg1 = TransactionSchema.safeParse(legs[0]);
+  const parsedLeg2 = TransactionSchema.safeParse(legs[1]);
+
+  if (!parsedLeg1.success || !parsedLeg2.success) {
+    return { success: false, error: 'Validation failed for one or more roll legs.' };
+  }
+
+  const groupId = crypto.randomUUID();
+
+  const prepareLeg = (data: any) => {
+    let quantity = data.quantity;
+    if (data.action === 'SELL') {
+      quantity = -Math.abs(quantity);
+    } else if (data.action === 'BUY') {
+      quantity = Math.abs(quantity);
+    }
+    return {
+      groupId,
+      tradeDate: data.tradeDate,
+      symbol: data.symbol,
+      assetType: data.assetType,
+      action: data.action,
+      quantity,
+      price: data.price,
+      strike: data.strike,
+      expiration: data.expiration,
+      multiplier: data.multiplier ?? (data.assetType === 'STOCK' ? 1 : 100),
+      fees: data.fees ?? 0,
+    };
+  };
+
+  try {
+    const leg1Data = prepareLeg(parsedLeg1.data);
+    const leg2Data = prepareLeg(parsedLeg2.data);
+
+    await prisma.$transaction([
+      prisma.transaction.create({ data: leg1Data }),
+      prisma.transaction.create({ data: leg2Data }),
+    ]);
+
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to execute roll transaction:', error);
+    return { success: false, error: 'Failed to execute roll transaction.' };
+  }
+}
+
 export async function deleteTransaction(id: string) {
   const parsed = IdSchema.safeParse(id);
   if (!parsed.success) {
