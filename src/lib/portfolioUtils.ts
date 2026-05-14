@@ -77,7 +77,7 @@ function processTransaction(pos: Position, t: Transaction): number {
       }
 
       // Cost basis of the closed portion
-      const costBasisOfClosed = (pos.averageCost / absQty) * closeQty * Math.sign(pos.quantity);
+      const costBasisOfClosed = pos.averageCost * closeQty * Math.sign(pos.quantity);
       // Proceeds/Cost of closing trade
       const closingTradeValue = t.price * t.multiplier * t.quantity;
 
